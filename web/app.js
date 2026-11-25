@@ -7,6 +7,14 @@ const drilldownConfig = {
     buildDetailTitle: (primary, secondary) =>
       primary && secondary ? `${primary} / ${secondary} 的连接明细` : "连接明细",
   },
+  process: {
+    countLabel: "进程",
+    primaryTitle: "进程排行",
+    secondaryColumn: "目标主机",
+    buildSecondaryTitle: (primary) => (primary ? `${primary} 访问的主机` : "目标主机"),
+    buildDetailTitle: (primary, secondary) =>
+      primary && secondary ? `${primary} / ${secondary} 的连接明细` : "连接明细",
+  },
   host: {
     countLabel: "主机",
     primaryTitle: "主机排行",
@@ -1279,7 +1287,7 @@ async function loadSecondaryRows(primaryLabel) {
 
   let path = "/api/traffic/substats"
   let params
-  const summary = state.mode === "summary" ? "1" : ""
+  const summary = state.mode === "summary" && dimension !== "process" ? "1" : ""
   let subdomainMode = false
   if (dimension === "host") {
     if (state.domainGroupingEnabled) {
@@ -1368,7 +1376,7 @@ async function loadData() {
         dimension: elements.dimension.value,
         start,
         end,
-        summary,
+        summary: elements.dimension.value === "process" ? "" : summary,
       }),
       fetchJSON("/api/traffic/trend", {
         start,

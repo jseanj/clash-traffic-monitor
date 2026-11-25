@@ -189,6 +189,7 @@ type service struct {
 	domainGroupingEnabled  bool
 	filterDirectTraffic    bool
 	lastConnections        map[string]connection
+	pollBaselineReady      bool
 	lastUploadTotal        int64
 	lastDownloadTotal      int64
 	lastAutoSwitchAt       int64
@@ -1280,6 +1281,25 @@ func (s *service) collectOnce(ctx context.Context) {
 		return
 	}
 
+	s.mu.Lock()
+	if settings != s.mihomoSettings {
+		s.mu.Unlock()
+		return
+	}
+	if !s.pollBaselineReady {
+		// Connections in the first poll can include bytes from before startup.
+		s.lastConnections = make(map[string]connection, len(resp.Connections))
+		for _, conn := range resp.Connections {
+			s.lastConnections[conn.ID] = conn
+		}
+		s.lastUploadTotal = resp.UploadTotal
+		s.lastDownloadTotal = resp.DownloadTotal
+		s.pollBaselineReady = true
+		s.mu.Unlock()
+		return
+	}
+	s.mu.Unlock()
+
 	if err := s.processConnections(ctx, resp); err != nil {
 		log.Printf("process connections: %v", err)
 	}
@@ -1299,6 +1319,7 @@ func (s *service) setMihomoSettings(settings mihomoSettings) {
 
 	if settings != s.mihomoSettings {
 		s.lastConnections = make(map[string]connection)
+		s.pollBaselineReady = false
 		s.lastUploadTotal = 0
 		s.lastDownloadTotal = 0
 	}
@@ -2239,6 +2260,25 @@ func (s *service) routes() http.Handler {
 }
 
 func (s *service) withCORS(next http.Handler) http.Handler {
+	listenHost, _, _ := net.SplitHostPort(s.cfg.ListenAddr)
+	if listenHost == "localhost" || net.ParseIP(listenHost).IsLoopback() {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			host, _, err := net.SplitHostPort(r.Host)
+			if err != nil {
+				host = r.Host
+			}
+			if host != "localhost" && !net.ParseIP(host).IsLoopback() {
+				http.Error(w, "dashboard accepts only local hosts", http.StatusForbidden)
+				return
+			}
+			if origin := r.Header.Get("Origin"); origin != "" && origin != "http://"+r.Host {
+				http.Error(w, "dashboard accepts only same-origin requests", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", defaultAllowedOrigin)
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

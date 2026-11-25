@@ -904,6 +904,38 @@ func TestProcessConnectionsBuffersAggregatesWithoutPersistingRawLogs(t *testing.
 	}
 }
 
+func TestCollectOnceSeedsExistingConnectionsBeforeCounting(t *testing.T) {
+	svc := newTestService(t)
+	svc.setMihomoSettings(mihomoSettings{URL: "http://127.0.0.1:9090"})
+	active := connection{ID: "existing", Upload: 100, Download: 500, Chains: []string{"NodeA"}}
+	active.Metadata.Process = "curl"
+	active.Metadata.Host = "example.com"
+	svc.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		payload := connectionsResponse{Connections: []connection{active}, UploadTotal: active.Upload, DownloadTotal: active.Download}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(data))}, nil
+	})}
+	svc.collectOnce(context.Background())
+	if len(svc.aggregateBuffer) != 0 {
+		t.Fatalf("first poll recorded historical bytes: %+v", svc.aggregateBuffer)
+	}
+
+	active.Upload += 4
+	active.Download += 20
+	svc.collectOnce(context.Background())
+	if len(svc.aggregateBuffer) != 1 {
+		t.Fatalf("got %d aggregate entries, want 1", len(svc.aggregateBuffer))
+	}
+	for _, entry := range svc.aggregateBuffer {
+		if entry.Upload != 4 || entry.Download != 20 {
+			t.Fatalf("recorded %+v, want upload 4 and download 20", entry)
+		}
+	}
+}
+
 func TestProcessConnectionsSkipsDirectTrafficWhenFilterEnabled(t *testing.T) {
 	svc := newTestService(t)
 	svc.filterDirectTraffic = true
@@ -3628,6 +3660,39 @@ func TestRoutesServeLicense(t *testing.T) {
 		if !strings.Contains(rec.Body.String(), want) {
 			t.Fatalf("expected license response to contain %q", want)
 		}
+	}
+}
+
+func TestLoopbackDashboardAcceptsOnlyLocalOrigins(t *testing.T) {
+	svc := newTestService(t)
+	svc.cfg.ListenAddr = "127.0.0.1:8080"
+	handler := svc.routes()
+	tests := []struct {
+		name   string
+		host   string
+		origin string
+		want   int
+	}{
+		{"local request", "127.0.0.1:8080", "", http.StatusOK},
+		{"local browser", "localhost:8080", "http://localhost:8080", http.StatusOK},
+		{"cross-origin browser", "127.0.0.1:8080", "https://example.org", http.StatusForbidden},
+		{"non-local host", "example.org:8080", "", http.StatusForbidden},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://"+tt.host+"/health", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			res := httptest.NewRecorder()
+			handler.ServeHTTP(res, req)
+			if res.Code != tt.want {
+				t.Fatalf("status = %d, want %d", res.Code, tt.want)
+			}
+			if got := res.Header().Get("Access-Control-Allow-Origin"); got != "" {
+				t.Fatalf("loopback dashboard advertised CORS origin %q", got)
+			}
+		})
 	}
 }
 

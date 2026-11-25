@@ -1711,7 +1711,12 @@ th {
     justify-content: stretch;
   }
 
-  .dimension-tab,
+  .dimension-tab {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-inline: 4px;
+  }
+
   .toolbar-field,
   .toolbar-action,
   .settings-field input {

@@ -361,6 +361,16 @@ select {
   line-height: 1.5;
 }
 
+.subscription-panel { padding: 18px; display: grid; gap: 12px; }
+.subscription-panel p { margin: 4px 0 0; }
+.subscription-panel .summary-title { margin-top: 0; }
+.subscription-remaining { border-color: var(--accent-border); background: var(--accent-soft); }
+.subscription-remaining .summary-value { color: var(--accent); font-size: 22px; }
+.subscription-panel.low-quota .subscription-remaining .summary-value { color: #bb3545; }
+.subscription-usage { display: flex; gap: 12px; align-items: center; }
+.subscription-usage progress { flex: 1; min-width: 0; height: 10px; accent-color: var(--accent); }
+.subscription-usage span { white-space: nowrap; }
+
 .modal-shell {
   position: fixed;
   inset: 0;

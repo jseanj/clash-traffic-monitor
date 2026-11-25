@@ -68,6 +68,25 @@
 
       <section id="statusBanner" class="panel status-banner hidden" role="status" aria-live="polite"></section>
 
+      <section id="subscriptionPanel" class="panel subscription-panel hidden" aria-labelledby="subscriptionTitle">
+        <div class="summary-intro">
+          <div><h2 id="subscriptionTitle" class="summary-title">订阅流量额度</h2>
+            <p id="subscriptionMeta" class="summary-note">正在读取 FlClash 订阅</p></div>
+          <button id="subscriptionRefreshBtn" class="toolbar-action ghost" type="button">刷新额度</button>
+        </div>
+        <div id="subscriptionValues" class="summary-grid">
+          <article class="summary-chip subscription-remaining"><span class="summary-key">剩余流量</span><strong id="subscriptionRemaining" class="summary-value">—</strong></article>
+          <article class="summary-chip"><span class="summary-key">已用流量（上传 + 下载）</span><strong id="subscriptionUsed" class="summary-value">—</strong></article>
+          <article class="summary-chip"><span class="summary-key">套餐总量</span><strong id="subscriptionTotal" class="summary-value">—</strong></article>
+          <article class="summary-chip"><span class="summary-key">到期时间</span><strong id="subscriptionExpire" class="summary-value">—</strong></article>
+        </div>
+        <div id="subscriptionUsage" class="subscription-usage">
+          <progress id="subscriptionProgress" max="100" value="0" aria-label="订阅流量已用比例"></progress>
+          <span id="subscriptionPercent" class="summary-note"></span>
+        </div>
+        <p class="summary-note">额度来自服务商，不受看板时间范围或直连过滤影响。请在 FlClash 中同步订阅以更新用量；本页每分钟读取同步结果。</p>
+      </section>
+
       <section id="runtimeSummary" class="panel runtime-summary" data-region="status">
         <div class="summary-intro">
           <div>

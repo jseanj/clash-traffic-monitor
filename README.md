@@ -178,6 +178,12 @@ docker run -d \
 
 ## 常用配置
 
+### FlClash 订阅额度（本机）
+
+设置 `TRAFFIC_MONITOR_FLCLASH_DB` 为 FlClash 的 `database.sqlite` 路径后，页面顶部显示当前订阅的剩余、已用、总量和到期时间。macOS 默认从 FlClash 偏好设置读取当前选中的订阅；也可通过 `TRAFFIC_MONITOR_FLCLASH_PROFILE_ID` 固定订阅 ID。
+
+额度按服务商返回的上传 + 下载计算，与本监控程序的历史流量、时间筛选及 DIRECT 过滤无关。页面每分钟及点击「刷新额度」时，以只读方式读取 FlClash 缓存；需要先在 FlClash 中同步订阅，才能取得服务商最新用量。本功能不会请求订阅链接，也不会向浏览器返回订阅 URL。数据暂不可用时显示提示，不会将缺失额度显示为零剩余。
+
 | 变量名 | 默认值 | 说明 |
 | --- | --- | --- |
 | `MIHOMO_URL` | 空 | 启动时优先使用的 Mihomo Controller 地址；未设置时可在页面首次打开后填写 |

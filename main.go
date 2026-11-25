@@ -2241,6 +2241,7 @@ func (s *service) routes() http.Handler {
 	mux.HandleFunc("/LICENSE", s.handleLicense)
 	mux.Handle("/", fileServer)
 	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/api/subscription", s.handleFlClashSubscription)
 	mux.HandleFunc("/api/settings/mihomo", s.handleMihomoSettings)
 	mux.HandleFunc("/api/settings/domain-grouping", s.handleDomainGroupingSettings)
 	mux.HandleFunc("/api/settings/direct-traffic-filter", s.handleDirectTrafficFilterSettings)

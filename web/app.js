@@ -1348,7 +1348,54 @@ function resetDetailPanels() {
   updateViewHints()
 }
 
+let subscriptionLoading = false
+
+function formatQuota(bytes) {
+  return `${(bytes / (1024 ** 3)).toFixed(2)} GB`
+}
+
+async function loadSubscription() {
+  if (subscriptionLoading) return
+  subscriptionLoading = true
+  const panel = document.getElementById("subscriptionPanel")
+  const button = document.getElementById("subscriptionRefreshBtn")
+  const values = document.getElementById("subscriptionValues")
+  const usage = document.getElementById("subscriptionUsage")
+  const meta = document.getElementById("subscriptionMeta")
+  button.disabled = true
+  try {
+    const data = await fetchJSON("/api/subscription")
+    panel.classList.toggle("hidden", !data.configured)
+    if (!data.configured) return
+    values.classList.remove("hidden")
+    const hasQuota = data.total > 0
+    const percent = hasQuota ? data.used / data.total * 100 : 0
+    panel.classList.toggle("low-quota", hasQuota && percent >= 90)
+    document.getElementById("subscriptionRemaining").textContent = hasQuota ? formatQuota(data.remaining) : "未提供额度"
+    document.getElementById("subscriptionUsed").textContent = formatQuota(data.used)
+    document.getElementById("subscriptionTotal").textContent = hasQuota ? formatQuota(data.total) : "未提供额度"
+    document.getElementById("subscriptionExpire").textContent = data.expire > 0 ? new Date(data.expire * 1000).toLocaleDateString("zh-CN") : "未提供"
+    document.getElementById("subscriptionProgress").value = Math.min(100, percent)
+    document.getElementById("subscriptionPercent").textContent = `${data.used > data.total ? "额度已用尽 · " : ""}已用 ${percent.toFixed(1)}%`
+    usage.classList.toggle("hidden", !hasQuota)
+    meta.textContent = `${data.name} · FlClash 同步于 ${data.updatedAt > 0 ? new Date(data.updatedAt * 1000).toLocaleString("zh-CN") : "未知时间"}`
+  } catch (error) {
+    panel.classList.remove("hidden")
+    values.classList.add("hidden")
+    usage.classList.add("hidden")
+    meta.textContent = error.message || "额度暂不可用，请在 FlClash 中同步订阅后重试"
+  } finally {
+    subscriptionLoading = false
+    button.disabled = false
+  }
+}
+
+document.getElementById("subscriptionRefreshBtn").addEventListener("click", loadSubscription)
+setInterval(loadSubscription, 60000)
+loadSubscription()
+
 async function loadData() {
+  void loadSubscription()
   if (!state.mihomoSettings.url) {
     state.settingsRequired = true
     state.settingsOpen = true
